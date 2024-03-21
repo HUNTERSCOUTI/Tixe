@@ -186,8 +186,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AnomalyMapOne: {fileID: 7428774952634479764, guid: ec900febdcbedb3478da091849d3cfec, type: 3}
   NormalMapOne: {fileID: 1904130025018119005, guid: 43997964c118a5b4e977b822a107d25a, type: 3}
-  CorrectLevelSign: {fileID: 6104832060307490817, guid: 8f992ba9fd896f04aa6d9be9ac11bf7a, type: 3}
-  WrongLevelSign: {fileID: 6884603943283758969, guid: cea9814fe47bd194e8c8445bbb205c66, type: 3}
+  ForwardLevelSign: {fileID: 6104832060307490817, guid: 8f992ba9fd896f04aa6d9be9ac11bf7a, type: 3}
+  BackwardLevelSign: {fileID: 6884603943283758969, guid: cea9814fe47bd194e8c8445bbb205c66, type: 3}
   Player: {fileID: 1030460890}
 --- !u!4 &329455794
 Transform:
@@ -469,7 +469,7 @@ Transform:
   m_GameObject: {fileID: 1030460888}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -16, y: 1.51, z: 37}
+  m_LocalPosition: {x: -25, y: 1.51, z: 32}
   m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children:

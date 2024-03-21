@@ -14,29 +14,46 @@ public class MapSpawning : MonoBehaviour
     public GameObject NormalMapOne;
 
     [Header("Signs")]
-    public GameObject CorrectLevelSign;
-    public GameObject WrongLevelSign;
+    public GameObject ForwardLevelSign;  // + on Z Axis
+    public GameObject BackwardLevelSign; // - on Z Axis
 
     private GameObject LevelSign; //Changes to Correct/Wrong depending on trigger
 
     [Header("Player")]
     public Transform Player;
 
-    private Vector3 lastSpawnPosition;
-    private float previousBlockLength = 0f;
-    private float previousBlockOffset = 0f;
-    private float previousBlockWidth = 0;
+    private Vector3 lastSectionSpawnPosition;
 
+    private readonly float defaultBlockSize = 8f;
+
+    private readonly float sectionLength = 78f;
+    private readonly float sectionWidth = 48f;
+    private readonly float levelSignLength = 20f;
+
+    public List<GameObject> currentSpawnedMapItems;
+
+    [SerializeField] int score = 0;
+    
     bool forward = true; // temporary
 
     void Start()
     {
+
         triggerManager = FindObjectOfType<TriggerManager>();
         if (triggerManager == null)
             Debug.Log("TRIGGER MANAGER NULL ERROR");
 
-        lastSpawnPosition = new Vector3(0f, 0f, 0f);
-        SpawnNextSection();
+        lastSectionSpawnPosition = new Vector3(0f, 0f, 0f);
+
+        //Base map shown to player
+        GameObject startMap = Instantiate(NormalMapOne, lastSectionSpawnPosition, Quaternion.identity, transform);
+        (GameObject forwardSign, GameObject backwardSign) = SpawnLevelSigns(NormalMapOne);
+
+        currentSpawnedMapItems.Add(backwardSign);
+        currentSpawnedMapItems.Add(startMap);
+        currentSpawnedMapItems.Add(forwardSign);
+
+        //SpawnNextSection();
     }
 
     void Update()
@@ -44,61 +61,120 @@ public class MapSpawning : MonoBehaviour
 
     }
 
+    public void Points(bool correctTrigger)
+    {
+        Debug.Log("TRIGGER: " + correctTrigger);
+        if (correctTrigger)
+            score++;
+        else
+            score = 0;
+    }
+
     void SpawnNextSection()
     {
         GameObject sectionToSpawn = DetermineNextSection();
 
-        (float blockWidth, float blockOffset) = GetWidthAndOffsetX(sectionToSpawn.name);
-        float blockLength = GetLengthOfBlock(sectionToSpawn.name);
-
-        Vector3 spawnPos = CalculateSpawnPosition(blockWidth);
+        Vector3 spawnPos = CalcSectionSpawnPosition();
 
         Vector3 rot = sectionToSpawn.transform.rotation.eulerAngles;
-        //if (!forward)
-            //rot = new Vector3(rot.x, rot.y + 180, rot.z);
 
         Instantiate(sectionToSpawn, spawnPos, Quaternion.Euler(rot), transform);
 
-        lastSpawnPosition = spawnPos;
+        lastSectionSpawnPosition = spawnPos;
 
-        previousBlockOffset = blockOffset;
-        previousBlockLength = blockLength;
-        previousBlockWidth = blockWidth;
-        forward = !forward;
+        (GameObject forwardSign, GameObject backwardSign) = SpawnLevelSigns(sectionToSpawn);
+
+        currentSpawnedMapItems.Add(backwardSign);
+        currentSpawnedMapItems.Add(sectionToSpawn);
+        currentSpawnedMapItems.Add(forwardSign);
     }
 
-    void SpawnLevelSignBehind()
+    (GameObject, GameObject) SpawnLevelSigns(GameObject sectionSpawning)
     {
-        GameObject levelSignToSpawn = DetermineLevelSign();
+        // + Z Axis
+        Vector3 forwardSpawnPos = CalcForwardLevelSignPos();
+
+        // - Z Axis
+        Vector3 backwardSpawnPos = CalcBackwardLevelSignPos();
+
+        GameObject forwardSign;
+        GameObject backwardSign;
+
+        if (sectionSpawning.name.Contains("NormalSection"))
+        {
+            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+            backwardSign = Instantiate(ForwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
+        }
+        else if (sectionSpawning.name.Contains("AnomalySection"))
+        {
+            forwardSign  = Instantiate(BackwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
+        }
+        else // Spawning start map
+        {
+            Debug.Log("Start Map Spawned");
+            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
+        }
+
+        return (forwardSign, backwardSign);
     }
     
-    Vector3 CalculateSpawnPosition(float blockWidth)
+    Vector3 CalcSectionSpawnPosition()
     {
-        Vector3 spawnPosition = lastSpawnPosition;
+        Vector3 spawnPosition = lastSectionSpawnPosition;
 
         if (forward)
         {
-            Vector3 forwardOffset = Vector3.forward * previousBlockLength;
+            Vector3 forwardOffset = Vector3.forward * (sectionLength + levelSignLength);
 
-            Vector3 leftOffset = Vector3.left * previousBlockOffset;
+            Vector3 pivotOffset = new(defaultBlockSize, 0f, 0f);
 
-            spawnPosition += (previousBlockWidth > blockWidth ? leftOffset : Vector3.zero) + forwardOffset;
+            Vector3 leftOffset = (Vector3.left * sectionWidth) + pivotOffset;
+
+            spawnPosition += leftOffset + forwardOffset;
 
             return spawnPosition;
-        } else
+        }
+        else
         {
-            //Vector3 forwardOffset = Vector3.back * previousBlockLength;
+            //Vector3 forwardOffset = Vector3.back * sectionLength;
 
-            Vector3 blockOffsetRight = new(8f, 0f, 0f);
+            Vector3 leftOffset = Vector3.right * sectionWidth;
 
-            Vector3 leftOffset = (Vector3.right * previousBlockOffset) + blockOffsetRight;
-
-            spawnPosition += (previousBlockWidth > blockWidth ? leftOffset : Vector3.zero);
+            spawnPosition += leftOffset;
 
             return spawnPosition;
         }
     }
-    
+
+    //Forwards being + on the Z axis
+    Vector3 CalcForwardLevelSignPos()
+    {
+        Vector3 spawnPosition = lastSectionSpawnPosition;
+
+        Vector3 forwardOffset = Vector3.forward * levelSignLength + new Vector3(0f, 0f, sectionLength);
+
+        Vector3 leftOffset = Vector3.left * (sectionWidth - defaultBlockSize);
+
+        spawnPosition += forwardOffset + leftOffset;
+
+        return spawnPosition;
+    }
+
+    //Backwards being - on the Z axis
+    Vector3 CalcBackwardLevelSignPos()
+    {
+        Vector3 spawnPosition = lastSectionSpawnPosition;
+
+        //Vector3 backwardOffset = Vector3.back * levelSignLength;
+
+        //spawnPosition += backwardOffset;
+
+        return spawnPosition;
+    }
+
+
 
     GameObject DetermineNextSection()
     {
@@ -118,40 +194,12 @@ public class MapSpawning : MonoBehaviour
         return nextSection;
     }
 
-    /*
-    GameObject DetermineNextBlock()
-    {
-        GameObject nextBlock = null;
-
-        switch (sequenceCounter)
-        {
-            case 0:
-                nextBlock = PlayRoom;
-                break;
-            case 1:
-                nextBlock = TriggerArea;
-                break;
-            case 2:
-                LevelSign = forward ? CorrectLevelSign : WrongLevelSign;
-                nextBlock = LevelSign;
-                forward = !forward;
-                break;
-            default:
-                nextBlock = TriggerArea;
-                sequenceCounter = -1;
-                break;
-        }
-
-        sequenceCounter++;
-        return nextBlock;
-    }
-    */
     float GetLengthOfBlock(string blockName)
     {
         float length = blockName switch
         {
-            "AnamalySectionOne" => 98f,
-            "NormalSectionOne" => 98f,
+            "AnomalySectionOne" => 78f,
+            "NormalSectionOne" => 78f,
             "BackwardLevel" => 20f,
             "ForwardLevel" => 20f,
             _ => 8f,
@@ -159,14 +207,13 @@ public class MapSpawning : MonoBehaviour
         return length;
     }
 
-    (float, float) GetWidthAndOffsetX(string blockName)
+    float GetWidth(string blockName)
     {
         return blockName switch
         {
-            //             Width, Pivot Offset
-            "AnamalySectionOne" => (48f, 40f),
-            "NormalSectionOne"  => (48f, 40f),
-            _ => (8f, 0f),
+            "AnomalySectionOne" => 48f,
+            "NormalSectionOne"  => 48f,
+            _ => 8f,
         };
     }
 }
