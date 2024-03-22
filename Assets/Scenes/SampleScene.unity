@@ -165,6 +165,7 @@ GameObject:
   m_Component:
   - component: {fileID: 329455794}
   - component: {fileID: 329455793}
+  - component: {fileID: 329455795}
   m_Layer: 0
   m_Name: MapHolder
   m_TagString: Untagged
@@ -189,6 +190,7 @@ MonoBehaviour:
   ForwardLevelSign: {fileID: 6104832060307490817, guid: 8f992ba9fd896f04aa6d9be9ac11bf7a, type: 3}
   BackwardLevelSign: {fileID: 6884603943283758969, guid: cea9814fe47bd194e8c8445bbb205c66, type: 3}
   Player: {fileID: 1030460890}
+  score: -1
 --- !u!4 &329455794
 Transform:
   m_ObjectHideFlags: 0
@@ -204,6 +206,34 @@ Transform:
   m_Children: []
   m_Father: {fileID: 344481353}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &329455795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329455792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f95d46b305f2e7545b7c84859897656d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Event: {fileID: 11400000, guid: 16ff1608dac184e43bc0b6ba8c0056e5, type: 2}
+  Response:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 329455793}
+        m_TargetAssemblyTypeName: MapSpawning, Assembly-CSharp
+        m_MethodName: Points
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &344481352
 GameObject:
   m_ObjectHideFlags: 0
@@ -458,7 +488,7 @@ MonoBehaviour:
   rb: {fileID: 1030460891}
   cameraClampAngle: 88
   sensitivity: 2
-  moveSpeed: 5
+  moveSpeed: 15
   jumpForce: 3
 --- !u!4 &1030460890
 Transform:

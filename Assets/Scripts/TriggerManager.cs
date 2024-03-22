@@ -10,8 +10,7 @@ public class TriggerManager : MonoBehaviour
 
     public GameEvent onTriggerTouched;
 
-    [SerializeField] bool correctTrigger;
-    //[SerializeField] bool levelChangeTrigger;
+    [SerializeField] Triggers eTriggers;
 
     void Start()
     {
@@ -25,7 +24,7 @@ public class TriggerManager : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        onTriggerTouched.Raise(correctTrigger);
+        onTriggerTouched.Raise(eTriggers);
     }
 }
 

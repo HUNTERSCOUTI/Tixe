@@ -421,7 +421,7 @@ MonoBehaviour:
   m_PreserveMeshAssetOnDestroy: 0
   assetGuid: 
   m_Mesh: {fileID: 0}
-  m_VersionIndex: 7973
+  m_VersionIndex: 7977
   m_IsSelectable: 1
   m_SelectedFaces: 
   m_SelectedEdges: []
@@ -475,7 +475,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 04c29de45969dab4e8b78893af6a7345, type: 2}
-  - {fileID: 2100000, guid: 6e8442dd275001c4f9d167e8d1b8c962, type: 2}
+  - {fileID: 2100000, guid: c22777d6e868e4f2fb421913386b154e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

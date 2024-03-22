@@ -7,22 +7,28 @@ using Debug = UnityEngine.Debug;
 
 public class MapSpawning : MonoBehaviour
 {
-    private TriggerManager triggerManager;
-
     [Header("Maps")]
-    public GameObject AnomalyMapOne;
-    public GameObject NormalMapOne;
+    [SerializeField] private GameObject AnomalyMapOne;
+    [SerializeField] private GameObject NormalMapOne;
+    //[SerializeField] private List<GameObject> AnomalyMapList;
+    //[SerializeField] private List<GameObject> NormalMapList;
+
+    private Section anomalyMapOneInstance;
+    private Section normalMapOneInstance;
+    //private List<Section> anomalyMapOneInstanceList;
+    //private List<Section> normalMapOneInstanceList;
 
     [Header("Signs")]
-    public GameObject ForwardLevelSign;  // + on Z Axis
-    public GameObject BackwardLevelSign; // - on Z Axis
+    [SerializeField] private GameObject ForwardLevelSign;  // + on Z Axis
+    [SerializeField] private GameObject BackwardLevelSign; // - on Z Axis
 
     private GameObject LevelSign; //Changes to Correct/Wrong depending on trigger
 
     [Header("Player")]
-    public Transform Player;
+    [SerializeField] private Transform Player;
 
     private Vector3 lastSectionSpawnPosition;
+    private Vector3 currectDirection;
 
     private readonly float defaultBlockSize = 8f;
 
@@ -30,30 +36,23 @@ public class MapSpawning : MonoBehaviour
     private readonly float sectionWidth = 48f;
     private readonly float levelSignLength = 20f;
 
-    public List<GameObject> currentSpawnedMapItems;
+    public List<Section> currentSpawnedMapItems = new();
 
-    [SerializeField] int score = 0;
+    [SerializeField] private float score;
     
-    bool forward = true; // temporary
-
     void Start()
     {
 
-        triggerManager = FindObjectOfType<TriggerManager>();
-        if (triggerManager == null)
-            Debug.Log("TRIGGER MANAGER NULL ERROR");
+        score = -1f;
 
         lastSectionSpawnPosition = new Vector3(0f, 0f, 0f);
 
+        //For loop to instansiate all prefabs
+        anomalyMapOneInstance = InstantiateSection(AnomalyMapOne, true);
+        normalMapOneInstance = InstantiateSection(NormalMapOne, false);
+
         //Base map shown to player
-        GameObject startMap = Instantiate(NormalMapOne, lastSectionSpawnPosition, Quaternion.identity, transform);
-        (GameObject forwardSign, GameObject backwardSign) = SpawnLevelSigns(NormalMapOne);
-
-        currentSpawnedMapItems.Add(backwardSign);
-        currentSpawnedMapItems.Add(startMap);
-        currentSpawnedMapItems.Add(forwardSign);
-
-        //SpawnNextSection();
+        LoadStartMap();
     }
 
     void Update()
@@ -61,71 +60,104 @@ public class MapSpawning : MonoBehaviour
 
     }
 
-    public void Points(bool correctTrigger)
+    public void Points(Triggers triggerReceived)
     {
-        Debug.Log("TRIGGER: " + correctTrigger);
-        if (correctTrigger)
+        Section nextSection = null;
+        if (triggerReceived == Triggers.Correct)
+        {
             score++;
-        else
+            nextSection = SpawnNextSection();
+            currectDirection = currentSpawnedMapItems[0].AnomalyMap ? Vector3.back : Vector3.forward;
+            SpawnLevelSignForward(nextSection.AnomalyMap);
+        }
+        else if (triggerReceived == Triggers.Wrong)
+        {
             score = 0;
+            nextSection = SpawnNextSection();
+            currectDirection = currentSpawnedMapItems[0].AnomalyMap ? Vector3.forward : Vector3.back;
+            SpawnLevelSignBackward(nextSection.AnomalyMap);
+        }
+        else if (triggerReceived == Triggers.LevelChange)
+        {
+            DespawnAndReplaceSection();
+            currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[0].enabled = false;
+            currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[1].enabled = true;
+            currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[2].enabled = true;
+        }
     }
 
-    void SpawnNextSection()
+    Section SpawnNextSection()
     {
-        GameObject sectionToSpawn = DetermineNextSection();
+        Section sectionToSpawn = DetermineNextSection();
 
         Vector3 spawnPos = CalcSectionSpawnPosition();
 
-        Vector3 rot = sectionToSpawn.transform.rotation.eulerAngles;
+        Vector3 rot = sectionToSpawn.SectionObject.transform.rotation.eulerAngles;
 
-        Instantiate(sectionToSpawn, spawnPos, Quaternion.Euler(rot), transform);
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[0].enabled = true;
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[1].enabled = false;
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[2].enabled = false;
+
+        Instantiate(sectionToSpawn.SectionObject, spawnPos, Quaternion.Euler(rot), transform);
 
         lastSectionSpawnPosition = spawnPos;
 
-        (GameObject forwardSign, GameObject backwardSign) = SpawnLevelSigns(sectionToSpawn);
-
-        currentSpawnedMapItems.Add(backwardSign);
         currentSpawnedMapItems.Add(sectionToSpawn);
-        currentSpawnedMapItems.Add(forwardSign);
-    }
 
-    (GameObject, GameObject) SpawnLevelSigns(GameObject sectionSpawning)
+        return sectionToSpawn;
+    }
+    
+    GameObject SpawnLevelSignForward(bool isAnomalyMap)
     {
         // + Z Axis
         Vector3 forwardSpawnPos = CalcForwardLevelSignPos();
 
+        GameObject forwardSign;
+
+        if (!isAnomalyMap)
+            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+
+        else if (isAnomalyMap)
+            forwardSign  = Instantiate(BackwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+
+        else // Spawning start map
+            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+
+        return forwardSign;
+    }
+    
+    GameObject SpawnLevelSignBackward(bool isAnomalyMap)
+    {
         // - Z Axis
         Vector3 backwardSpawnPos = CalcBackwardLevelSignPos();
 
-        GameObject forwardSign;
         GameObject backwardSign;
 
-        if (sectionSpawning.name.Contains("NormalSection"))
-        {
-            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
+        if (!isAnomalyMap)
             backwardSign = Instantiate(ForwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
-        }
-        else if (sectionSpawning.name.Contains("AnomalySection"))
-        {
-            forwardSign  = Instantiate(BackwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
-            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
-        }
-        else // Spawning start map
-        {
-            Debug.Log("Start Map Spawned");
-            forwardSign  = Instantiate(ForwardLevelSign, forwardSpawnPos, Quaternion.identity, transform);
-            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
-        }
 
-        return (forwardSign, backwardSign);
+        else if (isAnomalyMap)
+            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
+
+        else // Spawning start map
+            backwardSign = Instantiate(BackwardLevelSign, backwardSpawnPos, Quaternion.identity, transform);
+
+        return backwardSign;
+    }
+    
+    void DespawnAndReplaceSection()
+    {
+        Destroy(currentSpawnedMapItems[0].WrongLevelArea);
+        Destroy(currentSpawnedMapItems[0].SectionObject);
+        Destroy(currentSpawnedMapItems[0].CorrectLevelArea);
+        SpawnLevelSignBackward(currentSpawnedMapItems[1].AnomalyMap);
+        currentSpawnedMapItems.Remove(currentSpawnedMapItems[0]);
     }
     
     Vector3 CalcSectionSpawnPosition()
     {
         Vector3 spawnPosition = lastSectionSpawnPosition;
 
-        if (forward)
-        {
             Vector3 forwardOffset = Vector3.forward * (sectionLength + levelSignLength);
 
             Vector3 pivotOffset = new(defaultBlockSize, 0f, 0f);
@@ -135,9 +167,7 @@ public class MapSpawning : MonoBehaviour
             spawnPosition += leftOffset + forwardOffset;
 
             return spawnPosition;
-        }
-        else
-        {
+        /* BACKWARDS
             //Vector3 forwardOffset = Vector3.back * sectionLength;
 
             Vector3 leftOffset = Vector3.right * sectionWidth;
@@ -145,7 +175,7 @@ public class MapSpawning : MonoBehaviour
             spawnPosition += leftOffset;
 
             return spawnPosition;
-        }
+        */
     }
 
     //Forwards being + on the Z axis
@@ -174,17 +204,22 @@ public class MapSpawning : MonoBehaviour
         return spawnPosition;
     }
 
-
-
-    GameObject DetermineNextSection()
+    Section DetermineNextSection()
     {
         GameObject nextSection;
 
         System.Random rnd = new();
+        int result = rnd.Next(0, 2);
 
-        nextSection = rnd.Next(0, 2) == 1 ? AnomalyMapOne : NormalMapOne;
+        nextSection = result == 0 ? anomalyMapOneInstance.SectionObject : normalMapOneInstance.SectionObject;
 
-        return nextSection;
+        Section sectionInstance = new()
+        {
+            SectionObject = nextSection,
+            AnomalyMap = result == 0
+        };
+
+        return sectionInstance;
     }
 
     GameObject DetermineLevelSign()
@@ -192,6 +227,35 @@ public class MapSpawning : MonoBehaviour
         GameObject nextSection = null;
 
         return nextSection;
+    }
+
+    private Section InstantiateSection(GameObject prefab, bool isAnomalyMap)
+    {
+        Section section = new()
+        {
+            // Set properties of the Section object
+            AnomalyMap = isAnomalyMap,
+            SectionObject = prefab
+        };
+
+        return section;
+    }
+
+    void LoadStartMap()
+    {
+        GameObject startMap = Instantiate(normalMapOneInstance.SectionObject, lastSectionSpawnPosition, Quaternion.identity, transform);
+        Section startSection = InstantiateSection(startMap, false);
+        GameObject forwardSign = SpawnLevelSignForward(startSection.AnomalyMap);
+        GameObject backwardSign = SpawnLevelSignBackward(startSection.AnomalyMap);
+
+        startSection.CorrectLevelArea = forwardSign;
+        startSection.WrongLevelArea = backwardSign;
+
+        currentSpawnedMapItems.Add(startSection);
+
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[0].enabled = false;
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[1].enabled = true;
+        currentSpawnedMapItems[0].SectionObject.GetComponentsInChildren<BoxCollider>()[2].enabled = true;
     }
 
     float GetLengthOfBlock(string blockName)
